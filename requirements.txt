@@ -1,3 +1,6 @@
 google-genai
 python-dotenv
 mujoco
+pillow
+lerobot==0.6.1
+PyQt6
