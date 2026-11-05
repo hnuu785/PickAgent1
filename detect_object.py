@@ -22,6 +22,8 @@ def main():
     parser = argparse.ArgumentParser(description="Gemini로 이미지 속 물체 찾기")
     parser.add_argument("target", nargs="?", default="파란색 자동차", help="찾을 물체")
     parser.add_argument("--image", type=Path, default=Path(__file__).parent / "examples/toys.png")
+    parser.add_argument("--model", choices=("flash", "robotics"), default="flash",
+                        help="사용할 모델: flash (기본값) 또는 robotics (Gemini Robotics ER 2)")
     args = parser.parse_args()
 
     load_dotenv(Path(__file__).with_name(".env"))
@@ -33,10 +35,11 @@ def main():
         timeout=30000, retry_options=types.HttpRetryOptions(attempts=1)))
     with Image.open(args.image) as source:
         photo = source.convert("RGB")
-    print(f"'{args.target}' 찾는 중...", flush=True)
+    model = "gemini-robotics-er-2-preview" if args.model == "robotics" else "gemini-3.1-flash-lite"
+    print(f"{model} 모델로 '{args.target}' 찾는 중...", flush=True)
     try:
         response = client.models.generate_content(
-            model="gemini-3.1-flash-lite",
+            model=model,
             contents=[photo, f"Find only objects matching this description: {args.target}. "
                       "Return an empty boxes list if none match. Each box must be "
                       "[ymin, xmin, ymax, xmax] normalized to 0-1000."],
@@ -62,7 +65,8 @@ def main():
     if not detections.boxes:
         print("일치하는 물체를 찾지 못했습니다.")
         return
-    output = Path(__file__).parent / "outputs" / "detected.png"
+    filename = "detected_robotics.png" if args.model == "robotics" else "detected.png"
+    output = Path(__file__).parent / "outputs" / filename
     output.parent.mkdir(exist_ok=True)
     photo.save(output)
     print(f"결과 이미지: {output}")

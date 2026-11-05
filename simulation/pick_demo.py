@@ -74,7 +74,8 @@ def main():
             steps = int(3.25 / model.opt.timestep)
             for i in range(steps):
                 if viewer and not viewer.is_running():
-                    return 0
+                    print('시뮬레이션 창이 닫혀 작업이 중단됐습니다.', flush=True)
+                    return 1
                 fraction = min((i + 1) / max(steps * .7, 1), 1)
                 data.ctrl[:6] = start + (goal - start) * fraction
                 mujoco.mj_step(model, data)

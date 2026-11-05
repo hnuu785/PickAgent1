@@ -4,6 +4,7 @@
   <visual><global azimuth="140" elevation="-25"/></visual>
   <worldbody>
     <light pos="0 0 2"/>
+    <camera name="overhead" pos=".20 -.05 .65" quat="1 0 0 0" fovy="45"/>
     <geom name="floor" type="plane" size="1 1 .05" rgba=".85 .85 .85 1"/>
     <body name="toy" pos=".20 0 .015">
       <freejoint/>
