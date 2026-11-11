@@ -1,8 +1,9 @@
-"""Run the week 2 natural-language goods demo and its reproducible scenarios."""
+"""Run the natural-language goods demo with two baskets and its test scenarios."""
 import argparse
 from dataclasses import asdict, dataclass
 from io import BytesIO
 import json
+import math
 import os
 from pathlib import Path
 
@@ -18,6 +19,7 @@ from goods_agent import COLOR_NAMES, Selection, annotate, find_candidates, selec
 
 ROOT = Path(__file__).resolve().parents[1]
 SCENE = Path(__file__).with_name("goods_scene.xml")
+DOLL_SCENE = Path(__file__).with_name("doll_scene.xml")
 MODEL = "gemini-robotics-er-2-preview"
 HOME_POSE = (-1.3, 0, 0, 0, 0, 0)
 DROP_ZONE = (.20, -.18)
@@ -76,6 +78,8 @@ class PickResult:
 
 
 class MockController:
+    destination_xy_m = DROP_ZONE
+
     def __init__(self, succeed=True):
         self.succeed = succeed
 
@@ -86,7 +90,7 @@ class MockController:
 
 
 class MuJoCoController:
-    def __init__(self, case, viewer=False):
+    def __init__(self, case, viewer=False, dolls=False):
         import mujoco
         from vision_pick import HEIGHT, WIDTH, execute_motion, pixel_to_world
 
@@ -96,23 +100,33 @@ class MuJoCoController:
         self.execute = execute_motion
         self.case = case
         self.viewer = viewer
-        self.model = mujoco.MjModel.from_xml_path(str(SCENE))
+        self.model = mujoco.MjModel.from_xml_path(str(DOLL_SCENE if dolls else SCENE))
         self.data = mujoco.MjData(self.model)
         self.data.qpos[:6] = HOME_POSE
         self.data.ctrl[:6] = HOME_POSE
+        mujoco.mj_forward(self.model, self.data)
+        floor = self.model.geom("source_floor")
+        self.source_surface_z = float(self.data.geom_xpos[floor.id, 2] + floor.size[2])
+        self.destination_xy_m = tuple(map(float, self.data.geom("drop_zone").xpos[:2]))
         for slot, (position, color) in enumerate(zip(case.positions, case.colors), 1):
             address = self.model.joint(f"cube_{slot}_joint").qposadr[0]
-            self.data.qpos[address:address + 3] = [*position, .015]
-            self.model.geom(f"cube_{slot}_geom").rgba[:3] = PALETTE[color]
+            self.data.qpos[address:address + 3] = [*position, self.source_surface_z + .015]
+            if dolls:
+                self.data.qpos[address + 3:address + 7] = [math.sqrt(.5), 0, 0, math.sqrt(.5)]
+            for geom_id in range(self.model.ngeom):
+                geom = self.model.geom(geom_id)
+                if int(geom.bodyid[0]) == self.model.body(f"cube_{slot}").id and "_eye_" not in geom.name:
+                    geom.rgba[:3] = PALETTE[color]
         mujoco.mj_forward(self.model, self.data)
 
-    def photo(self):
+    def photo(self, camera="overhead"):
         with self.mujoco.Renderer(self.model, self.height, self.width) as renderer:
-            renderer.update_scene(self.data, camera="overhead")
+            renderer.update_scene(self.data, camera=camera)
             return Image.fromarray(renderer.render())
 
     def workbench_position(self, candidate):
-        return tuple(map(float, self.project(self.model, self.data, candidate.y, candidate.x, .03)))
+        return tuple(map(float, self.project(self.model, self.data, candidate.y, candidate.x,
+                                             self.source_surface_z + .03)))
 
     def pick(self, command):
         x, y = command.source_xy_m
@@ -133,7 +147,8 @@ class MuJoCoController:
                 from mujoco import viewer as mj_viewer
                 viewer = mj_viewer.launch_passive(self.model, self.data)
             result = self.execute(self.model, self.data, (x, y), command.destination_xy_m, viewer,
-                                  body_name=nearest, return_home=True, grip_closes=self.case.grip_closes)
+                                  body_name=nearest, return_home=True, grip_closes=self.case.grip_closes,
+                                  source_floor="source_floor")
         finally:
             if viewer is not None:
                 viewer.close()
@@ -151,23 +166,24 @@ def mock_photo(case):
     return image
 
 
-def run_case(case, request, mode, output, client=None, viewer=False):
+def run_case(case, request, mode, output, client=None, viewer=False, dolls=False):
     output.mkdir(parents=True, exist_ok=True)
     # Each run begins from a fresh scene and writes evidence for that run only.
     for filename in ("camera.png", "detected.png", "final.png", "result.json"):
         (output / filename).unlink(missing_ok=True)
-    controller = MockController(case.grip_closes) if mode == "mock" else MuJoCoController(case, viewer)
+    controller = MockController(case.grip_closes) if mode == "mock" else MuJoCoController(case, viewer, dolls)
     selection = None
     command = None
     if mode == "motion":
         if case.color not in case.colors:
             raise ValueError("동작 단독 모드는 장면에 있는 색을 선택해야 합니다.")
-        command = PickCommand(case.color, case.positions[case.colors.index(case.color)])
+        command = PickCommand(case.color, case.positions[case.colors.index(case.color)],
+                              controller.destination_xy_m)
     else:
         image = mock_photo(case) if mode == "mock" else controller.photo()
         original = output / "camera.png"
         image.save(original)
-        candidates = find_candidates(image)
+        candidates = find_candidates(image, dolls=dolls)
         try:
             if mode == "gemini":
                 selection = select_with_gemini(client, MODEL, request, original.read_bytes(), candidates)
@@ -185,7 +201,7 @@ def run_case(case, request, mode, output, client=None, viewer=False):
                       -.05 - (candidate.y / 1000 * image.height - 240) / 930)
             else:
                 xy = controller.workbench_position(candidate)
-            command = PickCommand(candidate.color, xy)
+            command = PickCommand(candidate.color, xy, controller.destination_xy_m)
 
     if command is None:
         result = PickResult(False, selection.status, "대상 선택", selection.detail)
@@ -220,11 +236,14 @@ def main():
     parser.add_argument("--evaluate", action="store_true", help="공통 시나리오 10개 실행")
     parser.add_argument("--viewer", action="store_true", help="로봇 동작 창 열기 (macOS는 mjpython 사용)")
     parser.add_argument("--output", type=Path, help="카메라 이미지와 JSON을 저장할 디렉터리")
+    parser.add_argument("--dolls", action="store_true", help="큐브 대신 인형 모양 강체 사용")
     args = parser.parse_args()
     if args.evaluate and (args.request or args.viewer or args.mode not in ("gemini", "color")):
         parser.error("--evaluate는 개별 요청이나 뷰어 없이 gemini 또는 color 모드에서 사용하세요.")
     if args.viewer and args.mode == "mock":
         parser.error("Mock 모드에는 시뮬레이션 창이 없습니다.")
+    if args.dolls and args.mode == "mock":
+        parser.error("인형 장면은 MuJoCo 모드에서 실행하세요.")
     client = None
     if args.mode == "gemini":
         load_dotenv(ROOT / ".env")
@@ -233,17 +252,19 @@ def main():
             parser.error(".env에 GEMINI_API_KEY를 설정해 주세요.")
         client = genai.Client(api_key=key, http_options=types.HttpOptions(
             timeout=30000, retry_options=types.HttpRetryOptions(attempts=1)))
-    output = args.output or ROOT / "outputs" / "week2" / args.mode
+    output = args.output or ROOT / "outputs" / ("dolls" if args.dolls else "baskets") / args.mode
     try:
         if args.evaluate:
-            results = [run_case(case, case.request, args.mode, output / case.name, client) for case in CASES.values()]
+            results = [run_case(case, case.request, args.mode, output / case.name, client, dolls=args.dolls)
+                       for case in CASES.values()]
             (output / "summary.json").write_text(json.dumps(results, indent=2, ensure_ascii=False) + "\n",
                                                  encoding="utf-8")
             passed = sum(record["passed"] for record in results)
             print(f"공통 케이스 통과 {passed}/{len(results)}")
             return 0 if passed == len(results) else 1
         case = CASES[args.case]
-        record = run_case(case, args.request or case.request, args.mode, output / case.name, client, args.viewer)
+        record = run_case(case, args.request or case.request, args.mode, output / case.name, client, args.viewer,
+                          args.dolls)
         return 0 if record["result"]["success"] else 1
     finally:
         if client is not None:

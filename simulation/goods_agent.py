@@ -34,8 +34,8 @@ class Selection:
     model_point: tuple[float, float] | None = None
 
 
-def find_candidates(image):
-    """Find solid-color cubes in the controlled MuJoCo scene."""
+def find_candidates(image, dolls=False):
+    """Find solid-color goods in the controlled MuJoCo scene."""
     pixels = np.asarray(image.convert("RGB"), dtype=np.int16)
     red, green, blue = pixels.transpose(2, 0, 1)
     masks = {
@@ -46,13 +46,20 @@ def find_candidates(image):
     height, width = pixels.shape[:2]
     candidates = []
     for color, mask in masks.items():
-        count, _, stats, centers = cv2.connectedComponentsWithStats(mask.astype(np.uint8))
+        count, labels, stats, centers = cv2.connectedComponentsWithStats(mask.astype(np.uint8))
         for index in range(1, count):
             x, y, w, h, area = map(int, stats[index])
-            # At this camera height a 30 mm cube spans about 28 pixels.
-            # The arm also has yellow details, but their shapes differ.
-            if 20 <= w <= 36 and 20 <= h <= 36 and area >= .65 * w * h:
-                cx, cy = map(float, centers[index])
+            # The arm also has yellow details, so filter by the expected shape.
+            valid_cube = 20 <= w <= 36 and 20 <= h <= 36 and area >= .65 * w * h
+            valid_doll = 25 <= w <= 60 and 28 <= h <= 80 and area >= .32 * w * h
+            if (valid_doll if dolls else valid_cube):
+                if dolls:
+                    component = (labels[y:y+h, x:x+w] == index).astype(np.uint8)
+                    distance = cv2.distanceTransform(component, cv2.DIST_L2, 5)
+                    _, _, _, (px, py) = cv2.minMaxLoc(distance)
+                    cx, cy = float(x + px), float(y + py)
+                else:
+                    cx, cy = map(float, centers[index])
                 candidates.append(Candidate(color, cy * 1000 / height, cx * 1000 / width,
                                             (x, y, x + w - 1, y + h - 1)))
     return candidates
@@ -117,7 +124,7 @@ def select_with_gemini(client, model, request, image_bytes, candidates):
         tools=[tool],
         automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
         system_instruction=(
-            "이 가상 인형뽑기에서는 요청한 큐브 하나를 고정 배출구로 옮긴다. "
+            "이 가상 인형뽑기에서는 요청한 물체 하나를 고정 배출구로 옮긴다. "
             "요청이 굿즈 하나를 고르는 것일 때 locate_goods를 정확히 한 번 호출하라. "
             "색은 사용자가 요청한 색이며, 위치는 현재 사진에서 실제로 보이는 대상의 중심이다. "
             "center_y는 위쪽 0 아래쪽 1000, center_x는 왼쪽 0 오른쪽 1000이다. "

@@ -60,64 +60,134 @@ class MotionResult:
     detail: str
 
 
+@dataclass(frozen=True)
+class GraspPlan:
+    offset_xy: tuple[float, float] = (.005564, .00086)
+    pick_z: float | None = None
+    carry_z: float = .13
+    release_z: float | None = None
+
+
 def execute_motion(model, data, cube_xy, zone_xy, viewer=None, *,
-                   body_name="toy", return_home=False, grip_closes=True):
+                   body_name="toy", return_home=False, grip_closes=True, source_floor=None,
+                   plan=None):
+    plan = plan or GraspPlan()
     toy = model.body(body_name).id
-    toy_geom = model.geom(f"{body_name}_geom").id
+    toy_geoms = set(np.flatnonzero(model.geom_bodyid == toy))
+    drop = model.geom("drop_zone")
     fixed, moving = model.body("gripper").id, model.body("moving_jaw_so101_v1").id
     seed = np.array([-0.1064721, 0.51173375, -0.61329353, 0.56664408, -0.82321947, 0.0])
     home = data.ctrl[:6].copy()
-    x, y = np.asarray(cube_xy) + np.array([.005564, .00086])
+    x, y = np.asarray(cube_xy) + np.asarray(plan.offset_xy)
     dx, dy = zone_xy
     closed = -.15 if grip_closes else .84835
-    stages = [("접근", [x, y, .13], .84835), ("내려가기", [x, y, .019773], .84835),
-              ("집기", [x, y, .019773], closed), ("들어 올리기", [x, y, .13], closed),
-              ("목표 지점으로 이동", [dx, dy, .13], closed),
-              ("내려놓기", [dx, dy, .13], 1.3)]
+    basket_bodies = set()
+    pick_z, release_z = .019773, .13
+    if source_floor is not None:
+        floor = model.geom(source_floor)
+        pick_z += data.geom_xpos[floor.id, 2] + floor.size[2]
+        release_z = .085
+        basket_bodies = {int(floor.bodyid[0]), int(drop.bodyid[0])}
+    if plan.pick_z is not None:
+        pick_z = plan.pick_z
+    if plan.release_z is not None:
+        release_z = plan.release_z
+    robot_root = model.body("base").id
+    geom_roots = model.body_rootid[model.geom_bodyid]
+    stages = [("접근", [x, y, plan.carry_z], .84835), ("내려가기", [x, y, pick_z], .84835),
+              ("집기", [x, y, pick_z], closed), ("들어 올리기", [x, y, plan.carry_z], closed),
+              ("목표 지점으로 이동", [dx, dy, plan.carry_z], closed)]
+    if basket_bodies:
+        stages.append(("배출 바구니로 내리기", [dx, dy, release_z], closed))
+    stages.append(("내려놓기", [dx, dy, release_z], 1.3))
+    if basket_bodies:
+        stages.append(("배출 바구니에서 나오기", [dx, dy, plan.carry_z], 1.3))
 
     def move(goal):
         start = data.ctrl[:6].copy()
         steps = int(3.25 / model.opt.timestep)
         for i in range(steps):
             if viewer is not None and not viewer.is_running():
-                return False
+                return "시뮬레이션 창이 닫혀 중단됐습니다."
             fraction = min((i + 1) / (steps * .7), 1)
             data.ctrl[:6] = start + (goal - start) * fraction
             mujoco.mj_step(model, data)
+            if basket_bodies:
+                for contact in data.contact:
+                    first, second = geom_roots[contact.geom1], geom_roots[contact.geom2]
+                    if (first == robot_root and second in basket_bodies
+                            or second == robot_root and first in basket_bodies):
+                        return "로봇팔이 바구니에 닿아 동작을 중단했습니다."
             if viewer is not None:
                 viewer.sync()
                 time.sleep(model.opt.timestep)
-        return True
+        return None
 
     for name, target, grip in stages:
         if name == "목표 지점으로 이동":
             touching = set()
             for contact in data.contact:
-                if contact.geom1 == toy_geom:
+                if contact.geom1 in toy_geoms:
                     touching.add(model.geom_bodyid[contact.geom2])
-                elif contact.geom2 == toy_geom:
+                elif contact.geom2 in toy_geoms:
                     touching.add(model.geom_bodyid[contact.geom1])
             if data.xpos[toy, 2] < .05 or not {fixed, moving} <= touching:
-                return MotionResult(False, "파지 검증", "대상 큐브를 양쪽 집게로 들어 올리지 못했습니다.")
+                return MotionResult(False, "파지 검증", "대상 물체를 양쪽 집게로 들어 올리지 못했습니다.")
         goal, error = solve_position(model, seed, target)
         if error > .03:
             return MotionResult(False, name, f"목표에 접근할 수 없습니다 (오차 {error:.3f}m).")
         goal[5] = grip
         print(f"{name}: 목표 위치 {np.round(target, 4)}", flush=True)
-        if not move(goal):
-            return MotionResult(False, name, "시뮬레이션 창이 닫혀 중단됐습니다.")
+        stop_reason = move(goal)
+        if stop_reason:
+            return MotionResult(False, name, stop_reason)
         seed = goal
 
     if return_home:
         print("복귀: 초기 관절 자세", flush=True)
-        if not move(home):
-            return MotionResult(False, "복귀", "시뮬레이션 창이 닫혀 중단됐습니다.")
-    actual_zone = model.geom_pos[model.geom("drop_zone").id, :2]
+        stop_reason = move(home)
+        if stop_reason:
+            return MotionResult(False, "복귀", stop_reason)
+    actual_zone = data.geom_xpos[drop.id, :2]
     actual_cube = data.xpos[toy]
     # Use simulator state only to evaluate the outcome, never to choose the action.
-    success = bool(np.linalg.norm(actual_cube[:2] - actual_zone) < .06 and actual_cube[2] < .04)
-    print(f"최종 큐브 위치: {np.round(actual_cube, 4)}, 실제 목표: {np.round(actual_zone, 4)}", flush=True)
-    detail = "요청한 큐브가 배출구에 도착했습니다." if success else "요청한 큐브가 배출구에 도착하지 않았습니다."
+    if basket_bodies:
+        extents = []
+        for geom_id in toy_geoms:
+            rotation = data.geom_xmat[geom_id].reshape(3, 3)
+            size = model.geom_size[geom_id]
+            geom_type = model.geom_type[geom_id]
+            if geom_type == mujoco.mjtGeom.mjGEOM_MESH:
+                mesh_id = model.geom_dataid[geom_id]
+                start = model.mesh_vertadr[mesh_id]
+                stop = start + model.mesh_vertnum[mesh_id]
+                vertices = np.einsum("ij,kj->ki", rotation, model.mesh_vert[start:stop])
+                vertices += data.geom_xpos[geom_id]
+                if not np.all(np.isfinite(vertices)):
+                    return MotionResult(False, "배출 확인", "물체의 위치를 확인할 수 없습니다.")
+                low, high = vertices.min(axis=0), vertices.max(axis=0)
+                extents.append(((low + high) / 2, (high - low) / 2))
+                continue
+            elif geom_type == mujoco.mjtGeom.mjGEOM_SPHERE:
+                extent = np.full(3, size[0])
+            elif geom_type == mujoco.mjtGeom.mjGEOM_CAPSULE:
+                extent = size[0] + np.abs(rotation[:, 2]) * size[1]
+            elif geom_type == mujoco.mjtGeom.mjGEOM_ELLIPSOID:
+                extent = np.sqrt((rotation ** 2) @ (size ** 2))
+            else:
+                extent = np.abs(rotation) @ size
+            extents.append((data.geom_xpos[geom_id].copy(), extent))
+        inside = all(np.all(np.abs(center[:2] - actual_zone) + extent[:2] <= drop.size[:2])
+                     for center, extent in extents)
+        bottom = data.geom_xpos[drop.id, 2] + drop.size[2]
+        object_bottom = min(center[2] - extent[2] for center, extent in extents)
+        on_floor = abs(object_bottom - bottom) < .004
+        stopped = np.linalg.norm(data.cvel[toy, 3:]) < .01
+        success = bool(inside and on_floor and stopped)
+    else:
+        success = bool(np.linalg.norm(actual_cube[:2] - actual_zone) < .06 and actual_cube[2] < .04)
+    print(f"최종 물체 위치: {np.round(actual_cube, 4)}, 실제 목표: {np.round(actual_zone, 4)}", flush=True)
+    detail = "요청한 물체가 배출구에 도착했습니다." if success else "요청한 물체가 배출구에 도착하지 않았습니다."
     return MotionResult(success, "배출 확인", detail)
 
 

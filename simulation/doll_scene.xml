@@ -1,0 +1,70 @@
+<mujoco model="goods_pick">
+  <include file="../models/robotstudio_so101/so101.xml"/>
+  <compiler meshdir="../models/robotstudio_so101/assets"/>
+  <visual><global azimuth="140" elevation="-25"/></visual>
+  <statistic center=".13 -.05 .12" extent=".65"/>
+  <default>
+    <default class="goods_cube">
+      <geom type="box" size=".015 .015 .015" mass=".015" friction="2 .01 .001"/>
+    </default>
+  </default>
+  <worldbody>
+    <light pos="0 0 2"/>
+    <camera name="overhead" pos=".20 -.05 .65" quat="1 0 0 0" fovy="45"/>
+    <camera name="demo" pos=".55 -.52 .45" xyaxes=".746 .666 0 -.338 .379 .861" fovy="42"/>
+    <geom name="floor" type="plane" size="1 1 .05" rgba=".85 .85 .85 1"/>
+    <body name="source_basket" pos=".20 -.005 0">
+      <geom name="source_floor" type="box" pos="0 0 .002" size=".075 .111 .002" rgba=".66 .63 .60 1"/>
+      <geom name="source_wall_left" type="box" pos="-.079 0 .011" size=".004 .119 .011" rgba=".37 .34 .32 1"/>
+      <geom name="source_wall_right" type="box" pos=".079 0 .011" size=".004 .119 .011" rgba=".37 .34 .32 1"/>
+      <geom name="source_wall_front" type="box" pos="0 -.115 .011" size=".075 .004 .011" rgba=".37 .34 .32 1"/>
+      <geom name="source_wall_back" type="box" pos="0 .115 .011" size=".075 .004 .011" rgba=".37 .34 .32 1"/>
+    </body>
+    <body name="delivery_basket" pos=".20 -.18 0">
+      <geom name="drop_zone" type="box" pos="0 0 .002" size=".06 .047 .002" rgba=".35 .66 .40 1"/>
+      <geom name="delivery_wall_left" type="box" pos="-.064 0 .016" size=".004 .055 .016" rgba=".19 .42 .27 1"/>
+      <geom name="delivery_wall_right" type="box" pos=".064 0 .016" size=".004 .055 .016" rgba=".19 .42 .27 1"/>
+      <geom name="delivery_wall_front" type="box" pos="0 -.051 .016" size=".06 .004 .016" rgba=".19 .42 .27 1"/>
+      <geom name="delivery_wall_back" type="box" pos="0 .051 .016" size=".06 .004 .016" rgba=".19 .42 .27 1"/>
+    </body>
+    <body name="cube_1" pos=".20 0 .019">
+      <freejoint name="cube_1_joint"/>
+      <geom name="cube_1_geom" type="box" size=".015 .015 .015" mass=".013" friction="2 .01 .001" rgba=".9 .07 .07 1"/>
+      <geom name="cube_1_head" type="sphere" pos="0 .023 .001" size=".010" mass=".003" friction="2 .01 .001" rgba=".9 .07 .07 1"/>
+      <geom name="cube_1_ear_l" type="sphere" pos="-.008 .031 .003" size=".0045" mass=".0004" rgba=".9 .07 .07 1"/>
+      <geom name="cube_1_ear_r" type="sphere" pos=".008 .031 .003" size=".0045" mass=".0004" rgba=".9 .07 .07 1"/>
+      <geom name="cube_1_arm_l" type="capsule" fromto="-.011 .006 0 -.019 .006 0" size=".005" mass=".0005" rgba=".9 .07 .07 1"/>
+      <geom name="cube_1_arm_r" type="capsule" fromto=".011 .006 0 .019 .006 0" size=".005" mass=".0005" rgba=".9 .07 .07 1"/>
+      <geom name="cube_1_leg_l" type="capsule" fromto="-.007 -.011 0 -.007 -.020 0" size=".005" mass=".0005" rgba=".9 .07 .07 1"/>
+      <geom name="cube_1_leg_r" type="capsule" fromto=".007 -.011 0 .007 -.020 0" size=".005" mass=".0005" rgba=".9 .07 .07 1"/>
+      <geom name="cube_1_eye_l" type="sphere" pos="-.004 .025 .010" size=".0015" mass=".00001" contype="0" conaffinity="0" rgba=".03 .03 .03 1"/>
+      <geom name="cube_1_eye_r" type="sphere" pos=".004 .025 .010" size=".0015" mass=".00001" contype="0" conaffinity="0" rgba=".03 .03 .03 1"/>
+    </body>
+    <body name="cube_2" pos=".20 -.07 .019">
+      <freejoint name="cube_2_joint"/>
+      <geom name="cube_2_geom" type="box" size=".015 .015 .015" mass=".013" friction="2 .01 .001" rgba=".07 .25 .95 1"/>
+      <geom name="cube_2_head" type="sphere" pos="0 .023 .001" size=".010" mass=".003" friction="2 .01 .001" rgba=".07 .25 .95 1"/>
+      <geom name="cube_2_ear_l" type="sphere" pos="-.008 .031 .003" size=".0045" mass=".0004" rgba=".07 .25 .95 1"/>
+      <geom name="cube_2_ear_r" type="sphere" pos=".008 .031 .003" size=".0045" mass=".0004" rgba=".07 .25 .95 1"/>
+      <geom name="cube_2_arm_l" type="capsule" fromto="-.011 .006 0 -.019 .006 0" size=".005" mass=".0005" rgba=".07 .25 .95 1"/>
+      <geom name="cube_2_arm_r" type="capsule" fromto=".011 .006 0 .019 .006 0" size=".005" mass=".0005" rgba=".07 .25 .95 1"/>
+      <geom name="cube_2_leg_l" type="capsule" fromto="-.007 -.011 0 -.007 -.020 0" size=".005" mass=".0005" rgba=".07 .25 .95 1"/>
+      <geom name="cube_2_leg_r" type="capsule" fromto=".007 -.011 0 .007 -.020 0" size=".005" mass=".0005" rgba=".07 .25 .95 1"/>
+      <geom name="cube_2_eye_l" type="sphere" pos="-.004 .025 .010" size=".0015" mass=".00001" contype="0" conaffinity="0" rgba=".03 .03 .03 1"/>
+      <geom name="cube_2_eye_r" type="sphere" pos=".004 .025 .010" size=".0015" mass=".00001" contype="0" conaffinity="0" rgba=".03 .03 .03 1"/>
+    </body>
+    <body name="cube_3" pos=".22 .045 .019">
+      <freejoint name="cube_3_joint"/>
+      <geom name="cube_3_geom" type="box" size=".015 .015 .015" mass=".013" friction="2 .01 .001" rgba=".95 .82 .07 1"/>
+      <geom name="cube_3_head" type="sphere" pos="0 .023 .001" size=".010" mass=".003" friction="2 .01 .001" rgba=".95 .82 .07 1"/>
+      <geom name="cube_3_ear_l" type="sphere" pos="-.008 .031 .003" size=".0045" mass=".0004" rgba=".95 .82 .07 1"/>
+      <geom name="cube_3_ear_r" type="sphere" pos=".008 .031 .003" size=".0045" mass=".0004" rgba=".95 .82 .07 1"/>
+      <geom name="cube_3_arm_l" type="capsule" fromto="-.011 .006 0 -.019 .006 0" size=".005" mass=".0005" rgba=".95 .82 .07 1"/>
+      <geom name="cube_3_arm_r" type="capsule" fromto=".011 .006 0 .019 .006 0" size=".005" mass=".0005" rgba=".95 .82 .07 1"/>
+      <geom name="cube_3_leg_l" type="capsule" fromto="-.007 -.011 0 -.007 -.020 0" size=".005" mass=".0005" rgba=".95 .82 .07 1"/>
+      <geom name="cube_3_leg_r" type="capsule" fromto=".007 -.011 0 .007 -.020 0" size=".005" mass=".0005" rgba=".95 .82 .07 1"/>
+      <geom name="cube_3_eye_l" type="sphere" pos="-.004 .025 .010" size=".0015" mass=".00001" contype="0" conaffinity="0" rgba=".03 .03 .03 1"/>
+      <geom name="cube_3_eye_r" type="sphere" pos=".004 .025 .010" size=".0015" mass=".00001" contype="0" conaffinity="0" rgba=".03 .03 .03 1"/>
+    </body>
+  </worldbody>
+</mujoco>
