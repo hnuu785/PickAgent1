@@ -1,5 +1,6 @@
 """Gemini camera-based fixed-table pick-and-place experiment (simulation only)."""
 import argparse
+from dataclasses import dataclass
 import math
 import os
 from pathlib import Path
@@ -52,39 +53,33 @@ def parse_and_validate(call):
     return values
 
 
-def run_motion(model, data, cube_xy, zone_xy, viewer):
-    toy = model.body("toy").id
-    toy_geom = model.geom("toy_geom").id
+@dataclass(frozen=True)
+class MotionResult:
+    success: bool
+    stage: str
+    detail: str
+
+
+def execute_motion(model, data, cube_xy, zone_xy, viewer=None, *,
+                   body_name="toy", return_home=False, grip_closes=True):
+    toy = model.body(body_name).id
+    toy_geom = model.geom(f"{body_name}_geom").id
     fixed, moving = model.body("gripper").id, model.body("moving_jaw_so101_v1").id
     seed = np.array([-0.1064721, 0.51173375, -0.61329353, 0.56664408, -0.82321947, 0.0])
-    x, y = cube_xy + np.array([.005564, .00086])
+    home = data.ctrl[:6].copy()
+    x, y = np.asarray(cube_xy) + np.array([.005564, .00086])
     dx, dy = zone_xy
+    closed = -.15 if grip_closes else .84835
     stages = [("접근", [x, y, .13], .84835), ("내려가기", [x, y, .019773], .84835),
-              ("집기", [x, y, .019773], -.15), ("들어 올리기", [x, y, .13], -.15),
-              ("목표 지점으로 이동", [dx, dy, .13], -.15),
+              ("집기", [x, y, .019773], closed), ("들어 올리기", [x, y, .13], closed),
+              ("목표 지점으로 이동", [dx, dy, .13], closed),
               ("내려놓기", [dx, dy, .13], 1.3)]
-    for name, target, grip in stages:
-        if name == "목표 지점으로 이동":
-            touching = set()
-            for contact in data.contact:
-                if contact.geom1 == toy_geom:
-                    touching.add(model.geom_bodyid[contact.geom2])
-                if contact.geom2 == toy_geom:
-                    touching.add(model.geom_bodyid[contact.geom1])
-            if data.xpos[toy, 2] < .05 or not {fixed, moving} <= touching:
-                print("실패: 큐브를 양쪽 집게로 들어 올리지 못했습니다.", flush=True)
-                return False
-        goal, error = solve_position(model, seed, target)
-        if error > .03:
-            print(f"실패: {name} 목표에 접근할 수 없습니다 (오차 {error:.3f}m).", flush=True)
-            return False
-        goal[5] = grip
+
+    def move(goal):
         start = data.ctrl[:6].copy()
-        print(f"{name}: 목표 위치 {np.round(target, 4)}", flush=True)
         steps = int(3.25 / model.opt.timestep)
         for i in range(steps):
             if viewer is not None and not viewer.is_running():
-                print("시뮬레이션 창이 닫혀 중단됐습니다.", flush=True)
                 return False
             fraction = min((i + 1) / (steps * .7), 1)
             data.ctrl[:6] = start + (goal - start) * fraction
@@ -92,14 +87,44 @@ def run_motion(model, data, cube_xy, zone_xy, viewer):
             if viewer is not None:
                 viewer.sync()
                 time.sleep(model.opt.timestep)
+        return True
+
+    for name, target, grip in stages:
+        if name == "목표 지점으로 이동":
+            touching = set()
+            for contact in data.contact:
+                if contact.geom1 == toy_geom:
+                    touching.add(model.geom_bodyid[contact.geom2])
+                elif contact.geom2 == toy_geom:
+                    touching.add(model.geom_bodyid[contact.geom1])
+            if data.xpos[toy, 2] < .05 or not {fixed, moving} <= touching:
+                return MotionResult(False, "파지 검증", "대상 큐브를 양쪽 집게로 들어 올리지 못했습니다.")
+        goal, error = solve_position(model, seed, target)
+        if error > .03:
+            return MotionResult(False, name, f"목표에 접근할 수 없습니다 (오차 {error:.3f}m).")
+        goal[5] = grip
+        print(f"{name}: 목표 위치 {np.round(target, 4)}", flush=True)
+        if not move(goal):
+            return MotionResult(False, name, "시뮬레이션 창이 닫혀 중단됐습니다.")
         seed = goal
+
+    if return_home:
+        print("복귀: 초기 관절 자세", flush=True)
+        if not move(home):
+            return MotionResult(False, "복귀", "시뮬레이션 창이 닫혀 중단됐습니다.")
     actual_zone = model.geom_pos[model.geom("drop_zone").id, :2]
     actual_cube = data.xpos[toy]
     # Use simulator state only to evaluate the outcome, never to choose the action.
     success = bool(np.linalg.norm(actual_cube[:2] - actual_zone) < .06 and actual_cube[2] < .04)
     print(f"최종 큐브 위치: {np.round(actual_cube, 4)}, 실제 목표: {np.round(actual_zone, 4)}", flush=True)
-    print(f"MuJoCo 검증 결과: {'성공' if success else '실패'}", flush=True)
-    return success
+    detail = "요청한 큐브가 배출구에 도착했습니다." if success else "요청한 큐브가 배출구에 도착하지 않았습니다."
+    return MotionResult(success, "배출 확인", detail)
+
+
+def run_motion(model, data, cube_xy, zone_xy, viewer):
+    result = execute_motion(model, data, cube_xy, zone_xy, viewer)
+    print(f"MuJoCo 검증 결과: {'성공' if result.success else '실패'} · {result.detail}", flush=True)
+    return result.success
 
 
 def main():

@@ -1,0 +1,28 @@
+<mujoco model="goods_pick">
+  <include file="../models/robotstudio_so101/so101.xml"/>
+  <compiler meshdir="../models/robotstudio_so101/assets"/>
+  <visual><global azimuth="140" elevation="-25"/></visual>
+  <default>
+    <default class="goods_cube">
+      <geom type="box" size=".015 .015 .015" mass=".015" friction="2 .01 .001"/>
+    </default>
+  </default>
+  <worldbody>
+    <light pos="0 0 2"/>
+    <camera name="overhead" pos=".20 -.05 .65" quat="1 0 0 0" fovy="45"/>
+    <geom name="floor" type="plane" size="1 1 .05" rgba=".85 .85 .85 1"/>
+    <body name="cube_1" pos=".20 0 .015">
+      <freejoint name="cube_1_joint"/>
+      <geom name="cube_1_geom" class="goods_cube" rgba=".9 .07 .07 1"/>
+    </body>
+    <body name="cube_2" pos=".20 -.07 .015">
+      <freejoint name="cube_2_joint"/>
+      <geom name="cube_2_geom" class="goods_cube" rgba=".07 .25 .95 1"/>
+    </body>
+    <body name="cube_3" pos=".22 .045 .015">
+      <freejoint name="cube_3_joint"/>
+      <geom name="cube_3_geom" class="goods_cube" rgba=".95 .82 .07 1"/>
+    </body>
+    <geom name="drop_zone" type="cylinder" pos=".20 -.18 .001" size=".06 .001" rgba=".2 .6 .3 1" contype="0" conaffinity="0"/>
+  </worldbody>
+</mujoco>
