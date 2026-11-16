@@ -4,5 +4,5 @@ python-dotenv
 mujoco
 pillow
 opencv-python-headless
-lerobot==0.6.1
+-e ./lerobot[core_scripts,feetech]
 PyQt6

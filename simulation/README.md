@@ -5,7 +5,7 @@
 Google Scanned Objects에서 가져온 범고래 봉제인형, 코뿔소 피규어, 장난감 버스를 상품 바구니에 배치했다. 실물 모델을 그리퍼와 바구니에 맞게 각각 16%, 43%, 60%로 축소했다. 배출 바구니의 벽은 작업대 기준 높이 8cm다. 각 물체는 고유한 질감과 충돌 메쉬를 가지며 강체로 움직인다.
 
 ```bash
-source .venv/bin/activate
+conda activate pickagent
 mjpython simulation/scanned_objects.py
 ```
 
@@ -37,7 +37,7 @@ python simulation/goods_pick.py --dolls --mode color --evaluate
 프로젝트 루트에서 가상환경을 활성화하고 `requirements.txt`의 패키지를 설치한다. Gemini 실행에는 `.env`의 `GEMINI_API_KEY`가 필요하다.
 
 ```bash
-source .venv/bin/activate
+conda activate pickagent
 python -m pip install -r requirements.txt
 python simulation/goods_pick.py "파란 굿즈 뽑아줘"
 ```
@@ -77,7 +77,7 @@ Gemini와 로컬 색상 인식 모드는 창을 띄우지 않아도 카메라 �
 프로젝트 루트에서 가상환경을 활성화하고 `.env`의 `GEMINI_API_KEY`를 설정한다.
 
 ```bash
-source .venv/bin/activate
+conda activate pickagent
 mjpython simulation/vision_pick.py
 ```
 
