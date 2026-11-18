@@ -251,7 +251,8 @@ def main():
         if not key or key == "your_api_key_here":
             parser.error(".env에 GEMINI_API_KEY를 설정해 주세요.")
         client = genai.Client(api_key=key, http_options=types.HttpOptions(
-            timeout=30000, retry_options=types.HttpRetryOptions(attempts=1)))
+            api_version="v1beta", timeout=30000,
+            retry_options=types.HttpRetryOptions(attempts=1)))
     output = args.output or ROOT / "outputs" / ("dolls" if args.dolls else "baskets") / args.mode
     try:
         if args.evaluate:

@@ -27,7 +27,8 @@ def main():
         raise SystemExit(".env 파일에 GEMINI_API_KEY를 설정해 주세요.")
 
     client = genai.Client(api_key=key, http_options=types.HttpOptions(
-        timeout=30000, retry_options=types.HttpRetryOptions(attempts=1)))
+        api_version="v1beta", timeout=30000,
+        retry_options=types.HttpRetryOptions(attempts=1)))
     tool = types.Tool(function_declarations=[types.FunctionDeclaration(
         name="pick_and_place_cube",
         description="가상의 주황색 큐브를 집어 녹색 목표 지점에 내려놓는다.",

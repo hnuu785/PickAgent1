@@ -1,11 +1,16 @@
 # Scanned object assets
 
 These assets are from Google Scanned Objects, distributed as MuJoCo MJCF models
-by Kevin Zakka. Original source commit:
+by Kevin Zakka. The original three models use this pinned source commit:
 https://github.com/kevinzakka/mujoco_scanned_objects/tree/6ff8d275cebfd5b47e49685e3cfbe64b20e49a3c
 
-The models used are Sootheze_Toasty_Orca, Schleich_African_Black_Rhino and
-SCHOOL_BUS. The OBJ meshes and PNG textures are licensed under CC BY 4.0:
+Android_Figure_Orange and Animal_Planet_Foam_2Headed_Dragon were added from the
+same repository's `main` branch on 2026-11-18.
+
+The models used are Sootheze_Toasty_Orca, Schleich_African_Black_Rhino,
+SCHOOL_BUS, Android_Figure_Orange, and
+Animal_Planet_Foam_2Headed_Dragon. The OBJ meshes and PNG textures are
+licensed under CC BY 4.0:
 https://creativecommons.org/licenses/by/4.0/
 
 The source MJCF files are licensed under the MIT License, copyright 2022

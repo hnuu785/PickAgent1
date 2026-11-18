@@ -70,11 +70,12 @@ class GraspPlan:
 
 def execute_motion(model, data, cube_xy, zone_xy, viewer=None, *,
                    body_name="toy", return_home=False, grip_closes=True, source_floor=None,
-                   plan=None):
+                   plan=None, destination_geom="drop_zone", stop_on_other_goods=False,
+                   continue_after_failed_grasp=False):
     plan = plan or GraspPlan()
     toy = model.body(body_name).id
     toy_geoms = set(np.flatnonzero(model.geom_bodyid == toy))
-    drop = model.geom("drop_zone")
+    drop = model.geom(destination_geom)
     fixed, moving = model.body("gripper").id, model.body("moving_jaw_so101_v1").id
     seed = np.array([-0.1064721, 0.51173375, -0.61329353, 0.56664408, -0.82321947, 0.0])
     home = data.ctrl[:6].copy()
@@ -118,6 +119,15 @@ def execute_motion(model, data, cube_xy, zone_xy, viewer=None, *,
                     if (first == robot_root and second in basket_bodies
                             or second == robot_root and first in basket_bodies):
                         return "로봇팔이 바구니에 닿아 동작을 중단했습니다."
+            if stop_on_other_goods:
+                for contact in data.contact:
+                    a, b = contact.geom1, contact.geom2
+                    for robot_geom, other_geom in ((a, b), (b, a)):
+                        other_body = int(model.geom_bodyid[other_geom])
+                        other_name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, other_body) or ""
+                        if (geom_roots[robot_geom] == robot_root and other_name.startswith(("doll_", "goods_"))
+                                and other_body != toy):
+                            return "로봇이 선택하지 않은 인형에 닿아 동작을 중단했습니다."
             if viewer is not None:
                 viewer.sync()
                 time.sleep(model.opt.timestep)
@@ -131,8 +141,11 @@ def execute_motion(model, data, cube_xy, zone_xy, viewer=None, *,
                     touching.add(model.geom_bodyid[contact.geom2])
                 elif contact.geom2 in toy_geoms:
                     touching.add(model.geom_bodyid[contact.geom1])
-            if data.xpos[toy, 2] < .05 or not {fixed, moving} <= touching:
+            grasped = data.xpos[toy, 2] >= .05 and {fixed, moving} <= touching
+            if not grasped and not continue_after_failed_grasp:
                 return MotionResult(False, "파지 검증", "대상 물체를 양쪽 집게로 들어 올리지 못했습니다.")
+            if not grasped:
+                print("파지 검증 실패: 목표 지점까지 동작을 계속합니다.", flush=True)
         goal, error = solve_position(model, seed, target)
         if error > .03:
             return MotionResult(False, name, f"목표에 접근할 수 없습니다 (오차 {error:.3f}m).")
@@ -229,7 +242,8 @@ def main():
     output.mkdir(exist_ok=True)
     photo.save(output / "mujoco_camera.png")
     client = genai.Client(api_key=key, http_options=types.HttpOptions(
-        timeout=30000, retry_options=types.HttpRetryOptions(attempts=1)))
+        api_version="v1beta", timeout=30000,
+        retry_options=types.HttpRetryOptions(attempts=1)))
     coordinate = {"type": "number", "minimum": 0, "maximum": 1000}
     tool = types.Tool(function_declarations=[types.FunctionDeclaration(
         name="pick_and_place", description="사진에서 찾은 주황색 큐브와 녹색 원의 중심 좌표로 시뮬레이션 작업을 실행한다.",

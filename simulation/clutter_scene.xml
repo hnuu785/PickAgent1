@@ -1,0 +1,153 @@
+<mujoco model="goods_pick">
+  <include file="../models/robotstudio_so101/so101.xml" />
+  <compiler meshdir="../models/robotstudio_so101/assets" />
+  <visual>
+    <global azimuth="140" elevation="-25" />
+  </visual>
+  <statistic center=".13 -.05 .12" extent=".65" />
+  <default>
+    <default class="goods_cube">
+      <geom type="box" size=".015 .015 .015" mass=".015" friction="2 .01 .001" />
+    </default>
+  </default>
+  <asset>
+    <texture name="orca_texture" type="2d" file="../models/scanned_objects/Sootheze_Toasty_Orca/texture.png" />
+    <material name="orca_material" texture="orca_texture" specular=".15" shininess=".2" />
+    <mesh name="orca_model" file="../../scanned_objects/Sootheze_Toasty_Orca/model.obj" scale="0.104 0.104 0.104" />
+    <texture name="rhino_texture" type="2d" file="../models/scanned_objects/Schleich_African_Black_Rhino/texture.png" />
+    <material name="rhino_material" texture="rhino_texture" specular=".15" shininess=".2" />
+    <mesh name="rhino_model" file="../../scanned_objects/Schleich_African_Black_Rhino/model.obj" scale="0.2795 0.2795 0.2795" />
+    <texture name="bus_texture" type="2d" file="../models/scanned_objects/SCHOOL_BUS/texture.png" />
+    <material name="bus_material" texture="bus_texture" specular=".15" shininess=".2" />
+    <mesh name="bus_model" file="../../scanned_objects/SCHOOL_BUS/model.obj" scale="0.39 0.39 0.39" />
+    <texture name="android_texture" type="2d" file="../models/scanned_objects/Android_Figure_Orange/texture.png" />
+    <material name="android_material" texture="android_texture" specular=".15" shininess=".2" />
+    <mesh name="android_model" file="../../scanned_objects/Android_Figure_Orange/model.obj" scale="0.4957 0.4957 0.4957" />
+    <texture name="dragon_texture" type="2d" file="../models/scanned_objects/Animal_Planet_Foam_2Headed_Dragon/texture.png" />
+    <material name="dragon_material" texture="dragon_texture" specular=".15" shininess=".2" />
+    <mesh name="dragon_model" file="../../scanned_objects/Animal_Planet_Foam_2Headed_Dragon/model.obj" scale="0.0995 0.0995 0.0995" />
+  </asset>
+  <worldbody>
+    <light pos="0 0 2" />
+    <camera name="overhead" pos=".20 -.05 .65" quat="1 0 0 0" fovy="45" />
+    <camera name="demo" pos=".55 -.52 .45" xyaxes=".746 .666 0 -.338 .379 .861" fovy="42" />
+    <geom name="floor" type="plane" size="1 1 .05" rgba=".85 .85 .85 1" />
+    <body name="source_basket" pos=".20 -.005 0">
+      <geom name="source_floor" type="box" pos="0 0 .002" size=".075 .111 .002" rgba=".66 .63 .60 1" />
+      <geom name="source_wall_left" type="box" pos="-.079 0 .055" size=".004 .119 .055" rgba=".37 .34 .32 1" />
+      <geom name="source_wall_right" type="box" pos=".079 0 .055" size=".004 .119 .055" rgba=".37 .34 .32 1" />
+      <geom name="source_wall_front" type="box" pos="0 -.115 .055" size=".075 .004 .055" rgba=".37 .34 .32 1" />
+      <geom name="source_wall_back" type="box" pos="0 .115 .055" size=".075 .004 .055" rgba=".37 .34 .32 1" />
+    </body>
+    <body name="delivery_basket" pos=".20 -.18 0">
+      <geom name="drop_zone" type="box" pos="0 0 .002" size=".06 .047 .002" rgba=".35 .66 .40 1" />
+      <geom name="delivery_wall_left" type="box" pos="-.064 0 .016" size=".004 .055 .016" rgba=".19 .42 .27 1" />
+      <geom name="delivery_wall_right" type="box" pos=".064 0 .016" size=".004 .055 .016" rgba=".19 .42 .27 1" />
+      <geom name="delivery_wall_front" type="box" pos="0 -.051 .016" size=".06 .004 .016" rgba=".19 .42 .27 1" />
+      <geom name="delivery_wall_back" type="box" pos="0 .051 .016" size=".06 .004 .016" rgba=".19 .42 .27 1" />
+    </body>
+    <body name="staging_area" pos=".20 .17 0">
+      <geom name="staging_zone" type="box" pos="0 0 .002" size=".05 .04 .002" rgba=".35 .5 .8 1" />
+    </body>
+    <body name="goods_01_orca" pos="0.190 -0.084 0.045">
+      <joint name="goods_01_orca_joint" type="free" damping=".01" />
+      <geom name="goods_01_orca_visual" type="mesh" mesh="orca_model" material="orca_material" contype="0" conaffinity="0" group="2" mass="0" />
+      <geom name="goods_01_orca_collision" type="mesh" mesh="orca_model" group="3" mass=".025" friction="1.5 .01 .001" rgba=".6 .6 .6 1" />
+    </body>
+    <body name="goods_02_dragon" pos="0.190 -0.044 0.045">
+      <joint name="goods_02_dragon_joint" type="free" damping=".01" />
+      <geom name="goods_02_dragon_visual" type="mesh" mesh="dragon_model" material="dragon_material" contype="0" conaffinity="0" group="2" mass="0" />
+      <geom name="goods_02_dragon_collision" type="mesh" mesh="dragon_model" group="3" mass=".025" friction="1.5 .01 .001" rgba=".6 .6 .6 1" />
+    </body>
+    <body name="goods_03_android" pos="0.190 -0.004 0.045">
+      <joint name="goods_03_android_joint" type="free" damping=".01" />
+      <geom name="goods_03_android_visual" type="mesh" mesh="android_model" material="android_material" contype="0" conaffinity="0" group="2" mass="0" />
+      <geom name="goods_03_android_collision" type="mesh" mesh="android_model" group="3" mass=".025" friction="1.5 .01 .001" rgba=".6 .6 .6 1" />
+    </body>
+    <body name="goods_04_bus" pos="0.190 0.036 0.045">
+      <joint name="goods_04_bus_joint" type="free" damping=".01" />
+      <geom name="goods_04_bus_visual" type="mesh" mesh="bus_model" material="bus_material" contype="0" conaffinity="0" group="2" mass="0" />
+      <geom name="goods_04_bus_collision" type="mesh" mesh="bus_model" group="3" mass=".025" friction="1.5 .01 .001" rgba=".6 .6 .6 1" />
+    </body>
+    <body name="goods_05_rhino" pos="0.190 0.076 0.045">
+      <joint name="goods_05_rhino_joint" type="free" damping=".01" />
+      <geom name="goods_05_rhino_visual" type="mesh" mesh="rhino_model" material="rhino_material" contype="0" conaffinity="0" group="2" mass="0" />
+      <geom name="goods_05_rhino_collision" type="mesh" mesh="rhino_model" group="3" mass=".025" friction="1.5 .01 .001" rgba=".6 .6 .6 1" />
+    </body>
+    <body name="goods_06_android" pos="0.210 -0.084 0.120">
+      <joint name="goods_06_android_joint" type="free" damping=".01" />
+      <geom name="goods_06_android_visual" type="mesh" mesh="android_model" material="android_material" contype="0" conaffinity="0" group="2" mass="0" />
+      <geom name="goods_06_android_collision" type="mesh" mesh="android_model" group="3" mass=".025" friction="1.5 .01 .001" rgba=".6 .6 .6 1" />
+    </body>
+    <body name="goods_07_bus" pos="0.210 -0.044 0.120">
+      <joint name="goods_07_bus_joint" type="free" damping=".01" />
+      <geom name="goods_07_bus_visual" type="mesh" mesh="bus_model" material="bus_material" contype="0" conaffinity="0" group="2" mass="0" />
+      <geom name="goods_07_bus_collision" type="mesh" mesh="bus_model" group="3" mass=".025" friction="1.5 .01 .001" rgba=".6 .6 .6 1" />
+    </body>
+    <body name="goods_08_orca" pos="0.210 -0.004 0.120">
+      <joint name="goods_08_orca_joint" type="free" damping=".01" />
+      <geom name="goods_08_orca_visual" type="mesh" mesh="orca_model" material="orca_material" contype="0" conaffinity="0" group="2" mass="0" />
+      <geom name="goods_08_orca_collision" type="mesh" mesh="orca_model" group="3" mass=".025" friction="1.5 .01 .001" rgba=".6 .6 .6 1" />
+    </body>
+    <body name="goods_09_rhino" pos="0.210 0.036 0.120">
+      <joint name="goods_09_rhino_joint" type="free" damping=".01" />
+      <geom name="goods_09_rhino_visual" type="mesh" mesh="rhino_model" material="rhino_material" contype="0" conaffinity="0" group="2" mass="0" />
+      <geom name="goods_09_rhino_collision" type="mesh" mesh="rhino_model" group="3" mass=".025" friction="1.5 .01 .001" rgba=".6 .6 .6 1" />
+    </body>
+    <body name="goods_10_dragon" pos="0.210 0.076 0.120">
+      <joint name="goods_10_dragon_joint" type="free" damping=".01" />
+      <geom name="goods_10_dragon_visual" type="mesh" mesh="dragon_model" material="dragon_material" contype="0" conaffinity="0" group="2" mass="0" />
+      <geom name="goods_10_dragon_collision" type="mesh" mesh="dragon_model" group="3" mass=".025" friction="1.5 .01 .001" rgba=".6 .6 .6 1" />
+    </body>
+    <body name="goods_11_rhino" pos="0.190 -0.084 0.195">
+      <joint name="goods_11_rhino_joint" type="free" damping=".01" />
+      <geom name="goods_11_rhino_visual" type="mesh" mesh="rhino_model" material="rhino_material" contype="0" conaffinity="0" group="2" mass="0" />
+      <geom name="goods_11_rhino_collision" type="mesh" mesh="rhino_model" group="3" mass=".025" friction="1.5 .01 .001" rgba=".6 .6 .6 1" />
+    </body>
+    <body name="goods_12_orca" pos="0.190 -0.044 0.195">
+      <joint name="goods_12_orca_joint" type="free" damping=".01" />
+      <geom name="goods_12_orca_visual" type="mesh" mesh="orca_model" material="orca_material" contype="0" conaffinity="0" group="2" mass="0" />
+      <geom name="goods_12_orca_collision" type="mesh" mesh="orca_model" group="3" mass=".025" friction="1.5 .01 .001" rgba=".6 .6 .6 1" />
+    </body>
+    <body name="goods_13_dragon" pos="0.190 -0.004 0.195">
+      <joint name="goods_13_dragon_joint" type="free" damping=".01" />
+      <geom name="goods_13_dragon_visual" type="mesh" mesh="dragon_model" material="dragon_material" contype="0" conaffinity="0" group="2" mass="0" />
+      <geom name="goods_13_dragon_collision" type="mesh" mesh="dragon_model" group="3" mass=".025" friction="1.5 .01 .001" rgba=".6 .6 .6 1" />
+    </body>
+    <body name="goods_14_android" pos="0.190 0.036 0.195">
+      <joint name="goods_14_android_joint" type="free" damping=".01" />
+      <geom name="goods_14_android_visual" type="mesh" mesh="android_model" material="android_material" contype="0" conaffinity="0" group="2" mass="0" />
+      <geom name="goods_14_android_collision" type="mesh" mesh="android_model" group="3" mass=".025" friction="1.5 .01 .001" rgba=".6 .6 .6 1" />
+    </body>
+    <body name="goods_15_bus" pos="0.190 0.076 0.195">
+      <joint name="goods_15_bus_joint" type="free" damping=".01" />
+      <geom name="goods_15_bus_visual" type="mesh" mesh="bus_model" material="bus_material" contype="0" conaffinity="0" group="2" mass="0" />
+      <geom name="goods_15_bus_collision" type="mesh" mesh="bus_model" group="3" mass=".025" friction="1.5 .01 .001" rgba=".6 .6 .6 1" />
+    </body>
+    <body name="goods_16_bus" pos="0.210 -0.084 0.270">
+      <joint name="goods_16_bus_joint" type="free" damping=".01" />
+      <geom name="goods_16_bus_visual" type="mesh" mesh="bus_model" material="bus_material" contype="0" conaffinity="0" group="2" mass="0" />
+      <geom name="goods_16_bus_collision" type="mesh" mesh="bus_model" group="3" mass=".025" friction="1.5 .01 .001" rgba=".6 .6 .6 1" />
+    </body>
+    <body name="goods_17_dragon" pos="0.210 -0.044 0.270">
+      <joint name="goods_17_dragon_joint" type="free" damping=".01" />
+      <geom name="goods_17_dragon_visual" type="mesh" mesh="dragon_model" material="dragon_material" contype="0" conaffinity="0" group="2" mass="0" />
+      <geom name="goods_17_dragon_collision" type="mesh" mesh="dragon_model" group="3" mass=".025" friction="1.5 .01 .001" rgba=".6 .6 .6 1" />
+    </body>
+    <body name="goods_18_rhino" pos="0.210 -0.004 0.270">
+      <joint name="goods_18_rhino_joint" type="free" damping=".01" />
+      <geom name="goods_18_rhino_visual" type="mesh" mesh="rhino_model" material="rhino_material" contype="0" conaffinity="0" group="2" mass="0" />
+      <geom name="goods_18_rhino_collision" type="mesh" mesh="rhino_model" group="3" mass=".025" friction="1.5 .01 .001" rgba=".6 .6 .6 1" />
+    </body>
+    <body name="goods_19_orca" pos="0.210 0.036 0.270">
+      <joint name="goods_19_orca_joint" type="free" damping=".01" />
+      <geom name="goods_19_orca_visual" type="mesh" mesh="orca_model" material="orca_material" contype="0" conaffinity="0" group="2" mass="0" />
+      <geom name="goods_19_orca_collision" type="mesh" mesh="orca_model" group="3" mass=".025" friction="1.5 .01 .001" rgba=".6 .6 .6 1" />
+    </body>
+    <body name="goods_20_android" pos="0.210 0.076 0.270">
+      <joint name="goods_20_android_joint" type="free" damping=".01" />
+      <geom name="goods_20_android_visual" type="mesh" mesh="android_model" material="android_material" contype="0" conaffinity="0" group="2" mass="0" />
+      <geom name="goods_20_android_collision" type="mesh" mesh="android_model" group="3" mass=".025" friction="1.5 .01 .001" rgba=".6 .6 .6 1" />
+    </body>
+  </worldbody>
+</mujoco>
